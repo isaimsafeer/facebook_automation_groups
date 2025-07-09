@@ -1,0 +1,127 @@
+/* General Page Styling */
+body {
+    background-color: #dfdfe2;
+    font-family: Arial, Helvetica, sans-serif;
+    color: #333;
+    margin: 0;
+    padding: 0;
+    padding-top: 80px; /* Add space at the top to avoid navbar overlap */
+}
+
+/* Navbar Styling */
+nav {
+    width: 100%;
+    background: linear-gradient(45deg, #ffffff, #ffffff); /* Gradient background */
+    display: flex;
+    justify-content: center;
+    padding: 15px 0; /* More padding for a taller navbar */
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+    border-bottom: 2px solid #0042cc; /* Thin bottom border for definition */
+}
+
+nav button {
+    background-color: #00c3ff;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    margin: 0 15px; /* Increased spacing between buttons */
+    font-size: 16px;
+    font-weight: 600; /* Slightly bold text */
+    cursor: pointer;
+    border-radius: 30px; /* Rounded corners for buttons */
+    transition: all 0.3s ease; /* Smooth transition for hover effects */
+}
+
+nav button:hover {
+    background-color: #57a8ff;
+    transform: scale(1.05); /* Slightly increase button size on hover */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); /* Add shadow on hover for depth */
+}
+
+nav button:active {
+    transform: scale(0.98); /* Slightly shrink button when clicked */
+}
+
+nav button:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(87, 168, 255, 0.5); /* Focus ring effect */
+}
+
+/* Centered and Styled Container */
+.container {
+    max-width: 600px;
+    margin: 0 auto;
+    background: #ffffff;
+    border-radius: 10px;
+    border: solid 1px rgb(13, 139, 34);
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    padding: 20px 30px;
+}
+
+/* Form Styling */
+.form-label {
+    font-weight: 600;
+    color: #555;
+}
+
+.form-control {
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 10px;
+    background-color: #f8f9fa;
+}
+
+.form-control:invalid {
+    border-color: #198754;
+    box-shadow: 0 0 5px rgba(220, 53, 69, 0.5);
+}
+
+.form-control:valid {
+    border-color: #198754;
+    box-shadow: 0 0 5px rgba(25, 135, 84, 0.5);
+}
+
+.form-select {
+    border-radius: 5px;
+}
+
+/* Submit Button */
+.btn-success {
+    display: block;
+    width: 100%;
+    font-size: 16px;
+    padding: 10px;
+    text-transform: uppercase;
+    font-weight: bold;
+    border-radius: 5px;
+}
+
+.btn-success.hidden {
+    display: none;
+}
+
+.btn-success:disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
+}
+
+/* Error Messages */
+.text-danger {
+    font-size: 14px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .container {
+        padding: 15px;
+    }
+
+    .btn-success {
+        font-size: 14px;
+        padding: 8px;
+    }
+}

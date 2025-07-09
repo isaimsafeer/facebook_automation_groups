@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+
+{% block title %}Facebook Users{% endblock %}
+
+{% block additional_css %}
+        .table-container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed; /* Fixed table layout for even columns */
+        }
+        th {
+            background-color: #007bff;
+            color: white;
+            font-weight: bold;
+            text-align: center; /* Center align headers */
+            padding: 15px 5px;
+            text-transform: uppercase;
+        }
+        td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #ddd;
+            text-align: center; /* Center align content */
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        /* Column widths */
+        th:nth-child(1), td:nth-child(1) { /* SR. NO. */
+            width: 8%;
+        }
+        th:nth-child(2), td:nth-child(2) { /* USERNAME */
+            width: 22%;
+        }
+        th:nth-child(3), td:nth-child(3) { /* SEARCH BY */
+            width: 12%;
+        }
+        th:nth-child(4), td:nth-child(4) { /* GROUP */
+            width: 22%;
+        }
+        th:nth-child(5), td:nth-child(5) { /* PROFILE VIEWED */
+            width: 15%;
+        }
+        th:nth-child(6), td:nth-child(6) { /* VIEWED TIME */
+            width: 21%;
+        }
+        tr:last-child td {
+            border-bottom: none;
+        }
+        .no-data {
+            text-align: center;
+            padding: 20px;
+            color: #777;
+        }
+        /* Link styling */
+        .group-link {
+            color: #007bff;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .group-link:hover {
+            color: #0056b3;
+            text-decoration: underline;
+        }
+        /* Add tooltip for truncated text */
+        td[title] {
+            cursor: help;
+        }
+        /* Countdown timer styling */
+        .refresh-info {
+            margin-top: 10px;
+            text-align: right;
+            font-size: 12px;
+            color: #666;
+        }
+        .refresh-time {
+            font-weight: bold;
+        }
+        /* Download header styling */
+        .download-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .download-header:hover {
+            color: #007bff;
+        }
+        .download-icon {
+            margin-left: 10px;
+            font-size: 1.2em;
+        }
+        .download-tooltip {
+            font-size: 0.6em;
+            color: #666;
+            margin-left: 8px;
+            font-weight: normal;
+        }
+{% endblock %}
+
+{% block content %}
+    <h1 class="download-header" title="Click to download as CSV">
+        Facebook Users Searched
+        <svg fill="#449" style="margin: 5px;" height="40px" width="40px"  version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="-91.8 -91.8 795.60 795.60" xml:space="preserve" stroke="#444" stroke-width="15.299975">
+
+            <g id="SVGRepo_bgCarrier" stroke-width="0"/>
+            
+            <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"/>
+            
+            <g id="SVGRepo_iconCarrier"> <g> <g> <g> <path d="M472.322,235.219c-1.655,0-3.31,0.03-4.97,0.089c-8.125-81.861-77.388-146.003-161.351-146.003 s-153.226,64.143-161.354,146.003c-1.657-0.06-3.316-0.089-4.97-0.089C62.659,235.219,0,297.878,0,374.897 s62.659,139.678,139.678,139.678c8.965,0,16.234-7.268,16.234-16.234c0-8.965-7.269-16.234-16.234-16.234 c-59.113,0-107.209-48.094-107.209-107.209s48.096-107.209,107.209-107.209c5.916,0,11.893,0.495,17.77,1.472 c4.746,0.789,9.597-0.568,13.243-3.704c3.649-3.136,5.719-7.729,5.652-12.54l-0.011-0.586c-0.005-0.292-0.011-0.584-0.011-0.877 c0-71.506,58.173-129.679,129.679-129.679S435.68,179.947,435.68,251.453c0,0.276-0.005,0.551-0.011,0.825l-0.008,0.676 c-0.058,4.804,2.018,9.388,5.666,12.515c3.649,3.128,8.489,4.479,13.235,3.689c5.858-0.975,11.832-1.471,17.759-1.471 c59.116,0,107.209,48.094,107.209,107.209c0,59.115-48.093,107.209-107.209,107.209c-8.965,0-16.234,7.269-16.234,16.234 c0,8.967,7.269,16.234,16.234,16.234c77.019,0,139.678-62.659,139.678-139.678C612,297.878,549.341,235.219,472.322,235.219z"/> <path d="M228.476,245.689c0-38.489,31.312-69.802,69.802-69.802c8.965,0,16.234-7.269,16.234-16.234s-7.269-16.234-16.234-16.234 c-56.393,0-102.271,45.878-102.271,102.271c0,8.965,7.266,16.234,16.234,16.234C221.207,261.923,228.476,254.655,228.476,245.689 z"/> <path d="M436.537,394.58h-46.965v-50.074c0-8.967-7.269-16.234-16.234-16.234H238.662c-8.965,0-16.234,7.268-16.234,16.234 v50.075h-46.962c-7.023,0-13.249,4.513-15.431,11.187s0.172,13.993,5.835,18.143l130.535,95.644 c2.856,2.093,6.226,3.139,9.597,3.139c3.369,0,6.737-1.046,9.595-3.139l130.535-95.644c5.663-4.149,8.017-11.47,5.835-18.143 C449.783,399.094,443.557,394.58,436.537,394.58z M306.002,486.332l-80.914-59.284h13.573c8.965,0,16.234-7.269,16.234-16.234 V360.74h102.208v50.075c0,8.965,7.269,16.234,16.234,16.234h13.573L306.002,486.332z"/> </g> </g> </g> </g>
+            
+            </svg>
+    </h1>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>SR. NO.</th>
+                    <th>USERNAME</th>
+                    <th>SEARCH BY</th>
+                    <th>GROUP</th>
+                    <th>PROFILE VIEWED</th>
+                    <th>VIEWED TIME</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if user_data %}
+                    {% for user in user_data %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td title="{{ user.name }}">{{ user.name }}</td>
+                            <td>{{ user.search_by|default:"Direct" }}</td>
+                            <td>
+                                {% if user.group_url %}
+                                    <a href="{{ user.group_url }}" class="group-link" target="_blank" title="{{ user.group }}">{{ user.group }}</a>
+                                {% else %}
+                                    {{ user.group }}
+                                {% endif %}
+                            </td>
+                            <td>{{ user.status }}</td>
+                            <td>{{ user.timestamp }}</td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="6" class="no-data">No users found.</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="refresh-info">
+        Auto-refreshing: <span class="refresh-time">10</span> seconds until next update
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        // Add click event to the h1 tag for downloading CSV
+        document.querySelector('.download-header').addEventListener('click', function() {
+            exportTableToCSV('facebook_users_' + new Date().toISOString().slice(0,10) + '.csv');
+        });
+        
+        function exportTableToCSV(filename) {
+            // Get the table element
+            const table = document.querySelector('table');
+            if (!table) {
+                alert('No data available to export');
+                return;
+            }
+            
+            // Get all rows from the table
+            const rows = table.querySelectorAll('tr');
+            
+            // Create CSV content
+            let csvContent = "data:text/csv;charset=utf-8,";
+            
+            // Process each table row into CSV format
+            rows.forEach(function(row) {
+                const columns = row.querySelectorAll('th, td');
+                let rowData = [];
+                
+                columns.forEach(function(column) {
+                    // Get text content and clean it
+                    let cellData = column.textContent.trim();
+                    
+                    // Handle links - try to get the link text
+                    const link = column.querySelector('a');
+                    if (link) {
+                        cellData = link.textContent.trim();
+                    }
+                    
+                    // Escape quotes and wrap with quotes
+                    cellData = '"' + cellData.replace(/"/g, '""') + '"';
+                    rowData.push(cellData);
+                });
+                
+                // Add row to CSV content
+                csvContent += rowData.join(',') + "\r\n";
+            });
+            
+            // Create download link
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", filename);
+            document.body.appendChild(link);
+            
+            // Trigger download
+            link.click();
+            
+            // Clean up
+            document.body.removeChild(link);
+        }
+        
+        // Update countdown timer
+        let countdown = 10;
+        const countdownElement = document.querySelector('.refresh-time');
+        
+        function updateCountdown() {
+            countdown--;
+            countdownElement.textContent = countdown;
+            
+            if (countdown <= 0) {
+                location.reload();
+                countdown = 10;
+            }
+        }
+        
+        // Set up auto-refresh countdown
+        setInterval(updateCountdown, 1000);
+    </script>
+{% endblock %} 

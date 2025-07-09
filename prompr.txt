@@ -1,0 +1,53 @@
+Right now this passes the universities names or links "uni_data[i]", I want to create time slots, from 9am to 3pm i want to pass the first 50 uni's and from 3pm and 9pm i want to pass the next 50 universities names in the csv file. How will i do that in this code. To stop the searching of first 50 uni's at 3pm and start 50 above.
+
+def logg(request):
+    if not request.user.is_authenticated:
+        print('User not logged In........')
+        return redirect('/')
+    updated_data = [
+        "Item 1: Updated Apple",
+        "Item 2: Updated Banana",
+        "Item 3: Updated Cherry",
+        "Item 4: Updated Date",
+        "Item 5: Updated Elderberry"
+    ]
+    print(updated_data)
+    # Broadcast the data
+    # broadcast_real_time_data(updated_data)
+    
+    if request.method == 'POST':
+        uploaded_file = request.FILES.get('csv_file')
+        search_option = request.POST.get('search_option')
+        uni_file = request.FILES.get('uni')
+        print(uploaded_file)
+        file_data = uploaded_file.read().decode('utf-8')
+        uni_data=uni_file.read().decode('utf-8')
+        print(uni_file)
+        uni_reader = pd.read_csv(io.StringIO(uni_data))
+        csv_reader = pd.read_csv(io.StringIO(file_data))
+
+        query = request.POST.get('query')
+        row=csv_reader.shape[0]
+        print('rows: ',row)
+        print('hello')
+        uni_data=distribute_data(uni_reader,row)
+        processes = []
+        max_workers=1
+        username=request.user.username
+        # Start 5 processes that run the same task in parallel
+        for i, row in csv_reader.iterrows():
+            uname=row['username']
+            pas=row['password']
+            print(uname, pas)
+            while len(processes) >= max_workers:
+                # Iterate over the processes to check if any have finished
+                for p in processes:
+                    if not p.is_alive():  # If the process is not running
+                        p.join()  # Clean up the process
+                        processes.remove(p)  # Remove it from the list
+                        break
+            process = multiprocessing.Process(target=main,args=(uname, pas,query,i,username,uni_data[i],search_option))
+            processes.append(process)
+            process.start()
+        print('open accounts')
+    return render(request,'insta/log.html') 

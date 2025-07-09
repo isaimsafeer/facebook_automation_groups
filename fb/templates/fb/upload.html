@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}Facebook CSV Upload{% endblock %}
+
+{% block additional_css %}
+    .container {
+        background: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        width: 400px;
+        text-align: center;
+    }
+    input, button.submit-btn {
+        width: 100%;
+        margin-top: 10px;
+        padding: 10px;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+    }
+    button.submit-btn {
+        background: #007bff;
+        color: white;
+        border: none;
+        cursor: pointer;
+    }
+    button.submit-btn:hover {
+        background: #0056b3;
+    }
+    .last-file {
+        color: #ff0000;
+        font-size: 12px;
+        margin-top: 5px;
+        text-align: left;
+        font-style: normal;
+    }
+{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <h2>Upload CSV Files</h2>
+        {% if error %}
+        <div style="background-color: #ffdddd; color: #ff0000; padding: 10px; margin-bottom: 15px; border-radius: 5px; border: 1px solid #ff0000;">
+            {{ error }}
+        </div>
+        {% endif %}
+        {% if warning %}
+        <div style="background-color: #fff3cd; color: #856404; padding: 10px; margin-bottom: 15px; border-radius: 5px; border: 1px solid #ffeeba;">
+            {{ warning }}
+        </div>
+        {% endif %}
+        {% if message or success %}
+        <div style="background-color: #d4edda; color: #155724; padding: 10px; margin-bottom: 15px; border-radius: 5px; border: 1px solid #c3e6cb;">
+            {{ message|default:"Files uploaded successfully!" }}
+            <script>
+                // Update displayed filenames immediately if provided in the response
+                document.addEventListener('DOMContentLoaded', function() {
+                    {% if last_csv_file %}
+                        var csvElement = document.getElementById('csv-filename');
+                        if (csvElement) {
+                            csvElement.textContent = "{{ last_csv_file }}";
+                        }
+                    {% endif %}
+                    
+                    {% if last_uni_file %}
+                        var uniElement = document.getElementById('uni-filename');
+                        if (uniElement) {
+                            uniElement.textContent = "{{ last_uni_file }}";
+                        }
+                    {% endif %}
+                    
+                    // Refresh the page after showing success message for a moment
+                    setTimeout(function() {
+                        // Force reload without cache to ensure session data is refreshed
+                        location.reload(true);
+                    }, 2000);
+                });
+            </script>
+        </div>
+        {% endif %}
+        <form action="{% url 'facebook' %}" method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            <label for="csv_file">Upload CSV File:</label>
+            <input type="file" name="csv_file" id="csv_file" accept=".csv" required>
+            {% if last_csv_file %}
+            <div class="last-file">Last uploaded: <strong id="csv-filename">{{ last_csv_file }}</strong> {% if last_csv_timestamp %}<span id="csv-timestamp">({{ last_csv_timestamp }})</span>{% endif %}</div>
+            {% endif %}
+
+            <label for="uni">Upload University File:</label>
+            <input type="file" name="uni" id="uni" accept=".csv" required>
+            {% if last_uni_file %}
+            <div class="last-file">Last uploaded: <strong id="uni-filename">{{ last_uni_file }}</strong> {% if last_uni_timestamp %}<span id="uni-timestamp">({{ last_uni_timestamp }})</span>{% endif %}</div>
+            {% endif %}
+
+            <button type="submit" class="submit-btn">Submit</button>
+        </form>
+    </div>
+
+    <script>
+        // Function to update the file input labels when files are selected
+        document.addEventListener('DOMContentLoaded', function() {
+            // Update CSV file label
+            document.getElementById('csv_file').addEventListener('change', function(e) {
+                if (e.target.files.length > 0) {
+                    var fileName = e.target.files[0].name;
+                    var fileLabel = document.querySelector('label[for="csv_file"]');
+                    fileLabel.innerHTML = 'Upload CSV File: <span style="color: #007bff;">' + fileName + '</span>';
+                }
+            });
+
+            // Update University file label
+            document.getElementById('uni').addEventListener('change', function(e) {
+                if (e.target.files.length > 0) {
+                    var fileName = e.target.files[0].name;
+                    var fileLabel = document.querySelector('label[for="uni"]');
+                    fileLabel.innerHTML = 'Upload University File: <span style="color: #007bff;">' + fileName + '</span>';
+                }
+            });
+        });
+    </script>
+{% endblock %}
+

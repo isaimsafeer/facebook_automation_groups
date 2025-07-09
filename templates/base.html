@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Facebook Automation{% endblock %}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .tab-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+            width: 100%;
+        }
+        .tab-button {
+            background-color: #00bfff;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+            min-width: 120px;
+            transition: background-color 0.3s;
+        }
+        .tab-button:hover {
+            background-color: #0095d9;
+        }
+        h1 {
+            color: #444;
+            margin-bottom: 20px;
+        }
+        {% block additional_css %}{% endblock %}
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <div class="tab-buttons">
+        <a href="{% url 'facebook' %}" class="tab-button">Home</a>
+        <a href="{% url 'users_view' %}" class="tab-button">Users</a>
+        <a href="{% url 'message-display' %}" class="tab-button">Messages</a>
+        <a href="{% url 'conversations' %}" class="tab-button">Conversations</a>
+        <a href="{% url 'summary_table' %}" class="tab-button">Summary</a>
+        <a href="{% url 'csv-display' %}" class="tab-button">Download Today's Report</a>
+    </div>
+
+    {% block content %}{% endblock %}
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html> 
