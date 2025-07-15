@@ -20,6 +20,7 @@ import re
 import csv
 import traceback
 import shutil
+from .helper import detect_ethnicity_from_name
 
 # Global set to store visited accounts
 visited_accounts_set = set()
@@ -2126,30 +2127,36 @@ def check_notifications(driver):
 
 def check_overview_section(driver, univer, visited_accounts_file, profile_link, username, password, matched_university):
     global current_logged_in_username
-    
+
     try:
         # Initialize variables
-        # Already have matched_university from the group
-        group_university = matched_university  # Store the group's matched university name
-        profile_university = ""  # Will store university detected directly from profile
-        
-        # We've already added the profile to visited_accounts_set before navigating
-        # So we can skip this check now
+        group_university = matched_university  # From group
+        profile_university = ""  # From profile
+
+        # # Navigate to "About" section
         about_button = WebDriverWait(driver, 20).until(
             EC.element_to_be_clickable((By.XPATH, "//span[text()='About']"))
         )
         driver.execute_script("arguments[0].click();", about_button)
         time.sleep(7)
 
+        # Extract studies section text
         studies_xpath = "//div[contains(@class, 'x13faqbe') and contains(@class, 'x78zum5') and contains(@class, 'xdt5ytf')]//span[contains(text(), 'Studies')]"
+        
         studies_text = extract_text_from_element(driver, studies_xpath)
 
-        # Extract the user's name
-        user_name = extract_text_from_element(driver, "//span[@class='x193iq5w xeuugli x13faqbe x1vvkbs x1xmvt09 x1lliihq x1s928wv xhkezso x1gmr53x x1cpjm7i x1fgarty x1943h6x x14qwyeo xw06pyt x579bpy xjkpybl x1xlr1w8 xzsf02u x1yc453h']")
+        # Extract user's name from name heading (not profile title)
+        name_xpath = "//h1[@class='html-h1 xdj266r x14z9mp xat24cr x1lziwak xexx8yu xyri2b x18d9i69 x1c1uobl x1vvkbs x1heor9g x1qlqyl8 x1pd3egz x1a2a7pz']"
+        user_name = extract_text_from_element(driver, name_xpath)
+
+        # Detect ethnicity
+        ethnicity = detect_ethnicity_from_name(user_name)
+        print(f"[DEBUG] Detected ethnicity for '{user_name}': {ethnicity}")
 
         status = "unmatched"
-        if studies_text and studies_text.strip():
-            # Print the full studies text for debugging
+
+        # Proceed only if ethnicity is South Asian and studies text exists
+        if ethnicity == "South Asian" and studies_text and studies_text.strip():
             print(f"[DEBUG] Found studies text: '{studies_text}'")
             
             # Convert to lowercase for case-insensitive matching
@@ -2181,25 +2188,27 @@ def check_overview_section(driver, univer, visited_accounts_file, profile_link, 
                     print(f"[INFO] University match found: '{university_name}' in studies text: '{studies_text}'")
                     profile_university = university_name  # Store the matched university name from studies
                     break
+        else:
+            print(f"[INFO] No match: Either ethnicity '{ethnicity}' is not South Asian or no studies info")
 
-        # Use the university detected directly from profile if found, otherwise use the group's university
+        # Final university assignment
         final_university = profile_university if profile_university else group_university
         if profile_university:
-            print(f"[INFO] Using university detected from profile studies: '{profile_university}'")
+            print(f"[INFO] Using profile-detected university: '{profile_university}'")
         elif group_university:
-            print(f"[INFO] Using university detected from group: '{group_university}'")
-        
-        # Include the global username in the new entry for "Search by" column
+            print(f"[INFO] Using group-detected university: '{group_university}'")
+
+        # Record match status
         search_username = current_logged_in_username if current_logged_in_username else username
         new_entry = pd.DataFrame({
-            "link": [profile_link], 
-            "name": [user_name], 
-            "timestamp": [pd.Timestamp.now()], 
-            "status": [status], 
+            "link": [profile_link],
+            "name": [user_name],
+            "timestamp": [pd.Timestamp.now()],
+            "status": [status],
             "searched_by": [search_username],
-            "university": [final_university if status == "pending" else ""]
+            "university": [final_university if status == "matched" else ""]
         })
-        
+
         # Use the safe CSV write function to avoid duplicates
         safe_write_to_csv(new_entry, visited_accounts_file)
 
@@ -2235,6 +2244,7 @@ def check_overview_section(driver, univer, visited_accounts_file, profile_link, 
         safe_write_to_csv(new_entry, visited_accounts_file)
         
         return "error"
+
 
 def process_pending_messages(username, password):
     global driver, retry_tracking, retry_tracking_file

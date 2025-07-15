@@ -112,8 +112,8 @@
                 <td id="total-deleted-users">0</td>
                 <td id="total-responses">0</td>
                 <td id="total-already-sent">0</td>
-                <td></td>
-                <td></td>
+                <td id="carry-forward-profiles-total"></td>
+                <td id="carry-forward-messages-total"></td>
                 <td id="total-time">00:00</td>
             </tr>
         </tfoot>
@@ -126,282 +126,310 @@
 
 {% block scripts %}
     <script>
-        // Add click event to the h1 tag for downloading CSV
-        document.querySelector('.download-header').addEventListener('click', function() {
-            exportTableToCSV('program_sessions_' + new Date().toISOString().slice(0,10) + '.csv');
-        });
+    // Helper function to convert minutes to HH:MM format
+    function minutesToHHMM(totalMinutes) {
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    }
+
+    // Helper function to convert HH:MM to total minutes
+    function hhmmToMinutes(timeStr) {
+        if (!timeStr || !timeStr.includes(':')) return 0;
         
-        function exportTableToCSV(filename) {
-            // Get the table element
-            const table = document.querySelector('table');
-            if (!table) {
-                alert('No data available to export');
-                return;
-            }
+        const parts = timeStr.split(':');
+        const hours = parseInt(parts[0]) || 0;
+        const minutes = parseInt(parts[1]) || 0;
+        
+        return (hours * 60) + minutes;
+    }
+
+    // Add click event to the h1 tag for downloading CSV
+    document.querySelector('.download-header').addEventListener('click', function() {
+        exportTableToCSV('program_sessions_' + new Date().toISOString().slice(0,10) + '.csv');
+    });
+    
+    function exportTableToCSV(filename) {
+        // Get the table element
+        const table = document.querySelector('table');
+        if (!table) {
+            alert('No data available to export');
+            return;
+        }
+        
+        // Get all rows from the table
+        const rows = table.querySelectorAll('thead tr, tbody tr, tfoot tr');
+        
+        // Create CSV content
+        let csvContent = "data:text/csv;charset=utf-8,";
+        
+        // Process each table row into CSV format
+        rows.forEach(function(row) {
+            const columns = row.querySelectorAll('th, td');
+            let rowData = [];
             
-            // Get all rows from the table
-            const rows = table.querySelectorAll('thead tr, tbody tr, tfoot tr');
-            
-            // Create CSV content
-            let csvContent = "data:text/csv;charset=utf-8,";
-            
-            // Process each table row into CSV format
-            rows.forEach(function(row) {
-                const columns = row.querySelectorAll('th, td');
-                let rowData = [];
+            columns.forEach(function(column) {
+                // Get text content and clean it
+                let cellData = column.textContent.trim();
                 
-                columns.forEach(function(column) {
-                    // Get text content and clean it
-                    let cellData = column.textContent.trim();
-                    
-                    // Handle ID spans that contain totals
-                    const spanWithId = column.querySelector('span[id]');
-                    if (spanWithId) {
-                        cellData = cellData.replace(spanWithId.textContent, '');
-                        cellData = cellData.trim();
-                    }
-                    
-                    // Escape quotes and wrap with quotes
-                    cellData = '"' + cellData.replace(/"/g, '""') + '"';
-                    rowData.push(cellData);
-                });
+                // Handle ID spans that contain totals
+                const spanWithId = column.querySelector('span[id]');
+                if (spanWithId) {
+                    cellData = cellData.replace(spanWithId.textContent, '');
+                    cellData = cellData.trim();
+                }
                 
-                // Add row to CSV content
-                csvContent += rowData.join(',') + "\r\n";
+                // Escape quotes and wrap with quotes
+                cellData = '"' + cellData.replace(/"/g, '""') + '"';
+                rowData.push(cellData);
             });
             
-            // Create download link
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", filename);
-            document.body.appendChild(link);
-            
-            // Trigger download
-            link.click();
-            
-            // Clean up
-            document.body.removeChild(link);
-        }
+            // Add row to CSV content
+            csvContent += rowData.join(',') + "\r\n";
+        });
+        
+        // Create download link
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", filename);
+        document.body.appendChild(link);
+        
+        // Trigger download
+        link.click();
+        
+        // Clean up
+        document.body.removeChild(link);
+    }
 
-        // Function to fetch and update data
-        function fetchAndUpdateData() {
-            fetch('{% url "get_execution_log_data" %}')
-                .then(response => response.text())
-                .then(csvData => {
-                    const rows = csvData.split('\n');
-                    const headers = rows[0].split(',');
+    // Function to fetch and update data
+    function fetchAndUpdateData() {
+        fetch('{% url "get_execution_log_data" %}')
+            .then(response => response.text())
+            .then(csvData => {
+                const rows = csvData.split('\n');
+                const headers = rows[0].split(',');
+                
+                // Find the indices of all relevant columns
+                const startTimeIndex = headers.findIndex(header => 
+                    header.toLowerCase().includes('start time'));
+                
+                const endTimeIndex = headers.findIndex(header => 
+                    header.toLowerCase().includes('end time'));
+                
+                const usernameIndex = headers.findIndex(header => 
+                    header.toLowerCase().includes('username'));
+                
+                const profilesFetchedIndex = headers.findIndex(header => 
+                    header.toLowerCase().includes('profiles fetched'));
+                
+                const profilesVisitedIndex = headers.findIndex(header => 
+                    header.toLowerCase().includes('profiles visited'));
+                
+                const profilesMatchedIndex = headers.findIndex(header => 
+                    header.toLowerCase().includes('profiles matched'));
+                
+                const sentMessagesIndex = headers.findIndex(header => 
+                    header.toLowerCase().includes('sent messages'));
+                
+                const deletedUsersIndex = headers.findIndex(header => 
+                    header.toLowerCase().includes('deleted users'));
+                
+                const responsesReceivedIndex = headers.findIndex(header => 
+                    header.toLowerCase().includes('responses received'));
+                
+                const alreadySentIndex = headers.findIndex(header => 
+                    header.toLowerCase().includes('already sent'));
+                
+                const carryForwardProfilesIndex = headers.findIndex(header => 
+                    header.toLowerCase().includes('carry forward profiles'));
+                
+                const carryForwardMessagesIndex = headers.findIndex(header => 
+                    header.toLowerCase().includes('carry forward messages'));
+                
+                const timeIndex = headers.findIndex(header => 
+                    header.toLowerCase() === 'time');
+                
+                if (startTimeIndex === -1 || endTimeIndex === -1) {
+                    console.error('Start time or end time columns not found in CSV');
+                    return;
+                }
+                
+                // Process data rows (skip header)
+                const dataRows = rows.slice(1).filter(row => row.trim() !== '');
+                
+                if (dataRows.length > 0) {
+                    // Clear the "No program sessions available" message
+                    document.getElementById('data-body').innerHTML = '';
                     
-                    // Find the indices of all relevant columns
-                    const startTimeIndex = headers.findIndex(header => 
-                        header.toLowerCase().includes('start time'));
+                    // Variables to track totals
+                    let totalProfilesFetched = 0;
+                    let totalProfilesVisited = 0;
+                    let totalProfilesMatched = 0;
+                    let totalMessagesSent = 0;
+                    let totalDeletedUsers = 0;
+                    let totalResponses = 0;
+                    let totalAlreadySent = 0;
                     
-                    const endTimeIndex = headers.findIndex(header => 
-                        header.toLowerCase().includes('end time'));
+                    // Reset total minutes
+                    let totalMinutes = 0;
+                    let totalHours = 0;
                     
-                    const usernameIndex = headers.findIndex(header => 
-                        header.toLowerCase().includes('username'));
+                    console.log("======== TIME CALCULATION DEBUG ========");
                     
-                    const profilesFetchedIndex = headers.findIndex(header => 
-                        header.toLowerCase().includes('profiles fetched'));
-                    
-                    const profilesVisitedIndex = headers.findIndex(header => 
-                        header.toLowerCase().includes('profiles visited'));
-                    
-                    const profilesMatchedIndex = headers.findIndex(header => 
-                        header.toLowerCase().includes('profiles matched'));
-                    
-                    const sentMessagesIndex = headers.findIndex(header => 
-                        header.toLowerCase().includes('sent messages'));
-                    
-                    const deletedUsersIndex = headers.findIndex(header => 
-                        header.toLowerCase().includes('deleted users'));
-                    
-                    const responsesReceivedIndex = headers.findIndex(header => 
-                        header.toLowerCase().includes('responses received'));
-                    
-                    const alreadySentIndex = headers.findIndex(header => 
-                        header.toLowerCase().includes('already sent'));
-                    
-                    const carryForwardProfilesIndex = headers.findIndex(header => 
-                        header.toLowerCase().includes('carry forward profiles'));
-                    
-                    const carryForwardMessagesIndex = headers.findIndex(header => 
-                        header.toLowerCase().includes('carry forward messages'));
-                    
-                    const timeIndex = headers.findIndex(header => 
-                        header.toLowerCase() === 'time');
-                    
-                    if (startTimeIndex === -1 || endTimeIndex === -1) {
-                        console.error('Start time or end time columns not found in CSV');
-                        return;
-                    }
-                    
-                    // Process data rows (skip header)
-                    const dataRows = rows.slice(1).filter(row => row.trim() !== '');
-                    
-                    if (dataRows.length > 0) {
-                        // Clear the "No program sessions available" message
-                        document.getElementById('data-body').innerHTML = '';
+                    // Add data rows to the table
+                    dataRows.forEach((row, rowIndex) => {
+                        const columns = row.split(',');
+                        if (columns.length < 2) return; // Skip malformed rows
                         
-                        // Variables to track totals
-                        let totalProfilesFetched = 0;
-                        let totalProfilesVisited = 0;
-                        let totalProfilesMatched = 0;
-                        let totalMessagesSent = 0;
-                        let totalDeletedUsers = 0;
-                        let totalResponses = 0;
-                        let totalAlreadySent = 0;
+                        // Get values from CSV
+                        const startTime = columns[startTimeIndex]?.trim() || '';
+                        const endTime = columns[endTimeIndex]?.trim() || '';
+                        const username = usernameIndex !== -1 && columns.length > usernameIndex ? 
+                            columns[usernameIndex] || 'Unknown' : 'Unknown';
                         
-                        // Reset total minutes
-                        let totalMinutes = 0;
-                        let totalHours = 0;
-                        
-                        console.log("======== TIME CALCULATION DEBUG ========");
-                        
-                        // Add data rows to the table
-                        dataRows.forEach((row, rowIndex) => {
-                            const columns = row.split(',');
-                            if (columns.length < 2) return; // Skip malformed rows
+                        const profilesFetched = profilesFetchedIndex !== -1 && columns.length > profilesFetchedIndex ? 
+                            parseInt(columns[profilesFetchedIndex]) || 0 : 0;
                             
-                            // Get values from CSV
-                            const startTime = columns[startTimeIndex]?.trim() || '';
-                            const endTime = columns[endTimeIndex]?.trim() || '';
-                            const username = usernameIndex !== -1 && columns.length > usernameIndex ? 
-                                columns[usernameIndex] || 'Unknown' : 'Unknown';
+                        const profilesVisited = profilesVisitedIndex !== -1 && columns.length > profilesVisitedIndex ? 
+                            parseInt(columns[profilesVisitedIndex]) || 0 : 0;
                             
-                            const profilesFetched = profilesFetchedIndex !== -1 && columns.length > profilesFetchedIndex ? 
-                                parseInt(columns[profilesFetchedIndex]) || 0 : 0;
-                                
-                            const profilesVisited = profilesVisitedIndex !== -1 && columns.length > profilesVisitedIndex ? 
-                                parseInt(columns[profilesVisitedIndex]) || 0 : 0;
-                                
-                            const profilesMatched = profilesMatchedIndex !== -1 && columns.length > profilesMatchedIndex ? 
-                                parseInt(columns[profilesMatchedIndex]) || 0 : 0;
-                                
-                            const sentMessages = sentMessagesIndex !== -1 && columns.length > sentMessagesIndex ? 
-                                parseInt(columns[sentMessagesIndex]) || 0 : 0;
-                                
-                            const deletedUsers = deletedUsersIndex !== -1 && columns.length > deletedUsersIndex ? 
-                                parseInt(columns[deletedUsersIndex]) || 0 : 0;
-                                
-                            const responsesReceived = responsesReceivedIndex !== -1 && columns.length > responsesReceivedIndex ? 
-                                parseInt(columns[responsesReceivedIndex]) || 0 : 0;
-                                
-                            const alreadySent = alreadySentIndex !== -1 && columns.length > alreadySentIndex ? 
-                                parseInt(columns[alreadySentIndex]) || 0 : 0;
-                                
-                            const carryForwardProfiles = carryForwardProfilesIndex !== -1 && columns.length > carryForwardProfilesIndex ? 
-                                columns[carryForwardProfilesIndex] : '';
-                                
-                            const carryForwardMessages = carryForwardMessagesIndex !== -1 && columns.length > carryForwardMessagesIndex ? 
-                                columns[carryForwardMessagesIndex] : '';
-                                
-                            const timeStr = columns[timeIndex]?.trim() || '';
+                        const profilesMatched = profilesMatchedIndex !== -1 && columns.length > profilesMatchedIndex ? 
+                            parseInt(columns[profilesMatchedIndex]) || 0 : 0;
                             
-                            // Handle time calculation - HH:MM format
-                            console.log(`Row ${rowIndex+1}: Time value = "${timeStr}"`);
+                        const sentMessages = sentMessagesIndex !== -1 && columns.length > sentMessagesIndex ? 
+                            parseInt(columns[sentMessagesIndex]) || 0 : 0;
                             
-                            if (timeStr && timeStr.includes(':')) {
-                                // For HH:MM format, get both hours and minutes
-                                const parts = timeStr.split(':');
-                                const hours = parseInt(parts[0]) || 0;
-                                const minutes = parseInt(parts[1]) || 0;
-                                
-                                console.log(`  Parsed as ${hours} hours and ${minutes} minutes`);
-                                
-                                // Add to totals (convert everything to minutes for calculation)
-                                totalMinutes += (hours * 60) + minutes;
-                                console.log(`  Running total: ${totalMinutes} minutes`);
-                            }
+                        const deletedUsers = deletedUsersIndex !== -1 && columns.length > deletedUsersIndex ? 
+                            parseInt(columns[deletedUsersIndex]) || 0 : 0;
                             
-                            // Add to totals
-                            totalProfilesFetched += profilesFetched;
-                            totalProfilesVisited += profilesVisited;
-                            totalProfilesMatched += profilesMatched;
-                            totalMessagesSent += sentMessages;
-                            totalDeletedUsers += deletedUsers;
-                            totalResponses += responsesReceived;
-                            totalAlreadySent += alreadySent;
+                        const responsesReceived = responsesReceivedIndex !== -1 && columns.length > responsesReceivedIndex ? 
+                            parseInt(columns[responsesReceivedIndex]) || 0 : 0;
                             
-                            const tr = document.createElement('tr');
-                            tr.className = 'data-row';
+                        const alreadySent = alreadySentIndex !== -1 && columns.length > alreadySentIndex ? 
+                            parseInt(columns[alreadySentIndex]) || 0 : 0;
                             
-                            // Create the row with all data
-                            tr.innerHTML = `
-                                <td>${startTime}</td>
-                                <td>${endTime}</td>
-                                <td>${username}</td>
-                                <td>${profilesFetched}</td>
-                                <td>${profilesVisited}</td>
-                                <td>${profilesMatched}</td>
-                                <td>${sentMessages}</td>
-                                <td>${deletedUsers}</td>
-                                <td>${responsesReceived}</td>
-                                <td>${alreadySent}</td>
-                                <td>${carryForwardProfiles}</td>
-                                <td>${carryForwardMessages}</td>
-                                <td>${timeStr}</td>
-                            `;
-                            
-                            document.getElementById('data-body').appendChild(tr);
-                        });
+                        // Calculate carry forward values dynamically for each row
+                        const carryForwardProfiles = profilesFetched - profilesVisited;
+                        const carryForwardMessages = profilesMatched - sentMessages;
                         
-                        console.log(`Final total minutes: ${totalMinutes}`);
+                        const timeStr = columns[timeIndex]?.trim() || '';
                         
-                        // Calculate hours and remaining minutes for display
-                        totalHours = Math.floor(totalMinutes / 60);
-                        const remainingMinutes = totalMinutes % 60;
+                        // Handle time calculation - convert to minutes and back to proper format
+                        console.log(`Row ${rowIndex+1}: Time value = "${timeStr}"`);
                         
-                        // Display the total time in HH:MM format
-                        document.getElementById('total-time').textContent = `${totalHours.toString().padStart(2, '0')}:${remainingMinutes.toString().padStart(2, '0')}`;
+                        let displayTime = timeStr; // Default to original value
                         
-                        console.log("======== END TIME CALCULATION DEBUG ========");
+                        if (timeStr && timeStr.includes(':')) {
+                            // Convert to total minutes
+                            const totalMinutesForRow = hhmmToMinutes(timeStr);
+                            console.log(`  Parsed as ${totalMinutesForRow} total minutes`);
+                            
+                            // Convert back to proper HH:MM format
+                            displayTime = minutesToHHMM(totalMinutesForRow);
+                            console.log(`  Display time: ${displayTime}`);
+                            
+                            // Add to running total
+                            totalMinutes += totalMinutesForRow;
+                            console.log(`  Running total: ${totalMinutes} minutes`);
+                        }
                         
-                        // Update totals in the header and footer
-                        document.getElementById('profiles-fetched-total').textContent = totalProfilesFetched;
-                        document.getElementById('profiles-visited-total').textContent = totalProfilesVisited;
-                        document.getElementById('profiles-matched-total').textContent = totalProfilesMatched;
-                        document.getElementById('messages-sent-total').textContent = totalMessagesSent;
-                        document.getElementById('deleted-users-total').textContent = totalDeletedUsers;
-                        document.getElementById('responses-total').textContent = totalResponses;
-                        document.getElementById('already-sent-total').textContent = totalAlreadySent;
+                        // Add to other totals
+                        totalProfilesFetched += profilesFetched;
+                        totalProfilesVisited += profilesVisited;
+                        totalProfilesMatched += profilesMatched;
+                        totalMessagesSent += sentMessages;
+                        totalDeletedUsers += deletedUsers;
+                        totalResponses += responsesReceived;
+                        totalAlreadySent += alreadySent;
                         
-                        document.getElementById('total-profiles-fetched').textContent = totalProfilesFetched;
-                        document.getElementById('total-profiles-visited').textContent = totalProfilesVisited;
-                        document.getElementById('total-profiles-matched').textContent = totalProfilesMatched;
-                        document.getElementById('total-messages-sent').textContent = totalMessagesSent;
-                        document.getElementById('total-deleted-users').textContent = totalDeletedUsers;
-                        document.getElementById('total-responses').textContent = totalResponses;
-                        document.getElementById('total-already-sent').textContent = totalAlreadySent;
-                    } else {
-                        document.getElementById('data-body').innerHTML = 
-                            '<tr><td colspan="13" class="no-data">No program sessions available.</td></tr>';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                });
-        }
+                        const tr = document.createElement('tr');
+                        tr.className = 'data-row';
+                        
+                        // Create the row with properly formatted time and dynamically calculated carry forward values
+                        tr.innerHTML = `
+                            <td>${startTime}</td>
+                            <td>${endTime}</td>
+                            <td>${username}</td>
+                            <td>${profilesFetched}</td>
+                            <td>${profilesVisited}</td>
+                            <td>${profilesMatched}</td>
+                            <td>${sentMessages}</td>
+                            <td>${deletedUsers}</td>
+                            <td>${responsesReceived}</td>
+                            <td>${alreadySent}</td>
+                            <td>${carryForwardProfiles}</td>
+                            <td>${carryForwardMessages}</td>
+                            <td>${displayTime}</td>
+                        `;
+                        
+                        document.getElementById('data-body').appendChild(tr);
+                    });
+                    
+                    console.log(`Final total minutes: ${totalMinutes}`);
+                    
+                    // Calculate hours and remaining minutes for display
+                    totalHours = Math.floor(totalMinutes / 60);
+                    const remainingMinutes = totalMinutes % 60;
+                    
+                    // Display the total time in HH:MM format
+                    document.getElementById('total-time').textContent = `${totalHours.toString().padStart(2, '0')}:${remainingMinutes.toString().padStart(2, '0')}`;
+                    
+                    console.log("======== END TIME CALCULATION DEBUG ========");
+                    
+                    // Update totals in the header and footer
+                    document.getElementById('profiles-fetched-total').textContent = totalProfilesFetched;
+                    document.getElementById('profiles-visited-total').textContent = totalProfilesVisited;
+                    document.getElementById('profiles-matched-total').textContent = totalProfilesMatched;
+                    document.getElementById('messages-sent-total').textContent = totalMessagesSent;
+                    document.getElementById('deleted-users-total').textContent = totalDeletedUsers;
+                    document.getElementById('responses-total').textContent = totalResponses;
+                    document.getElementById('already-sent-total').textContent = totalAlreadySent;
+                    
+                    document.getElementById('total-profiles-fetched').textContent = totalProfilesFetched;
+                    document.getElementById('total-profiles-visited').textContent = totalProfilesVisited;
+                    document.getElementById('total-profiles-matched').textContent = totalProfilesMatched;
+                    document.getElementById('total-messages-sent').textContent = totalMessagesSent;
+                    document.getElementById('total-deleted-users').textContent = totalDeletedUsers;
+                    document.getElementById('total-responses').textContent = totalResponses;
+                    document.getElementById('total-already-sent').textContent = totalAlreadySent;
 
-        // Update countdown timer
-        let countdown = 10;
-        const countdownElement = document.querySelector('.refresh-time');
+                    // Calculate carry forward totals
+                    const carryForwardProfileTotal = totalProfilesFetched - totalProfilesVisited;
+                    const carryForwardMessagesTotal = totalProfilesMatched - totalMessagesSent;
+
+                    // Update carry forward totals display
+                    document.getElementById('carry-forward-profiles-total').textContent = carryForwardProfileTotal;
+                    document.getElementById('carry-forward-messages-total').textContent = carryForwardMessagesTotal;
+
+                } else {
+                    document.getElementById('data-body').innerHTML = 
+                        '<tr><td colspan="13" class="no-data">No program sessions available.</td></tr>';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+    }
+
+    // Update countdown timer
+    let countdown = 10;
+    const countdownElement = document.querySelector('.refresh-time');
+    
+    function updateCountdown() {
+        countdown--;
+        countdownElement.textContent = countdown;
         
-        function updateCountdown() {
-            countdown--;
-            countdownElement.textContent = countdown;
-            
-            if (countdown <= 0) {
-                fetchAndUpdateData();
-                countdown = 10;
-            }
+        if (countdown <= 0) {
+            fetchAndUpdateData();
+            countdown = 10;
         }
-        
-        // Initial data load
-        fetchAndUpdateData();
-        
-        // Set up auto-refresh
-        setInterval(updateCountdown, 1000);
-    </script>
+    }
+    
+    // Initial data load
+    fetchAndUpdateData();
+    
+    // Set up auto-refresh
+    setInterval(updateCountdown, 1000);
+</script>
 {% endblock %}
