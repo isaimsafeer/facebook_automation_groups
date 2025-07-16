@@ -12,7 +12,7 @@ llm = ChatGoogleGenerativeAI(
 
 def detect_ethnicity_from_name(name):
     prompt = f"""
-Given the following name, categorize the most likely ethnicity as one of these five options: South Asian, Arabic, Asian, White, or Black. If unsure, choose the closest category.
+Given the following name, categorize the most likely ethnicity as one of these five options: South Asian, Arabic, Asian, White, or Black. If unsure, choose unknown.
 
 Name: {name}
 Ethnicity:

@@ -2125,6 +2125,23 @@ def check_notifications(driver):
         print(f"[ERROR] Error checking messenger notifications: {e}")
         return 0
 
+import requests
+from io import BytesIO
+
+def get_ethnicity_from_fastapi_bytes(image_bytes, api_url="http://localhost:5050/predict/"):
+    files = {
+        "file": ("image.jpg", BytesIO(image_bytes), "image/jpeg")
+    }
+    response = requests.post(api_url, files=files)
+
+    print(f"[DEBUG] Status Code: {response.status_code}")
+    print(f"[DEBUG] Response Text: {response.text}")
+
+    if response.status_code == 200:
+        return response.json().get("ethnicity", "Unknown")
+    else:
+        return "Unknown"
+
 def check_overview_section(driver, univer, visited_accounts_file, profile_link, username, password, matched_university):
     global current_logged_in_username
 
@@ -2153,10 +2170,43 @@ def check_overview_section(driver, univer, visited_accounts_file, profile_link, 
         ethnicity = detect_ethnicity_from_name(user_name)
         print(f"[DEBUG] Detected ethnicity for '{user_name}': {ethnicity}")
 
+        try:
+            image_xpath = "(//*[name()='image'])[2]"
+            image_element = WebDriverWait(driver, 10).until(
+                EC.visibility_of_element_located((By.XPATH, image_xpath))
+            )
+            print("[DEBUG] Found image element:", image_element)
+
+            # Extract href attribute (the image URL)
+            image_url = image_element.get_attribute("href") or image_element.get_attribute("xlink:href")
+            print(f"[DEBUG] Extracted image URL: {image_url}")
+
+            if image_url:
+                import requests
+                response = requests.get(image_url)
+                if response.status_code == 200:
+                    image_bytes = response.content
+                    # Optional: save for debug
+                    with open("debug_downloaded_image.jpg", "wb") as f:
+                        f.write(image_bytes)
+
+                    image_ethnicity = get_ethnicity_from_fastapi_bytes(image_bytes)
+                    print(f"[DEBUG] Ethnicity detected: {ethnicity}")
+                else:
+                    print(f"[ERROR] Failed to download image, status code: {response.status_code}")
+                    ethnicity = "Unknown"
+            else:
+                print("[ERROR] No href/xlink:href found on image element")
+                ethnicity = "Unknown"
+
+        except Exception as e:
+            print(f"[ERROR] Exception while retrieving image URL or ethnicity: {e}")
+            ethnicity = "Unknown"
+
         status = "unmatched"
 
         # Proceed only if ethnicity is South Asian and studies text exists
-        if ethnicity == "South Asian" and studies_text and studies_text.strip():
+        if ethnicity == "South Asian" and image_ethnicity == "Indian" and studies_text and studies_text.strip():
             print(f"[DEBUG] Found studies text: '{studies_text}'")
             
             # Convert to lowercase for case-insensitive matching

@@ -567,3 +567,46 @@ def conversations_view(request):
         print(f"Error reading unreadUsers.csv: {e}")
     
     return render(request, 'fb/conversations.html', {'conversations_data': conversations_data})
+
+import requests
+
+def get_ethnicity_from_fastapi(image_path):
+    url = "http://localhost:5050/predict/"
+    with open(image_path, "rb") as image_file:
+        files = {
+            "file": ("temp_image.jpg", image_file, "image/jpeg")  # <--- add content-type
+        }
+        response = requests.post(url, files=files)
+
+    if response.status_code == 200:
+        return response.json()
+    else:
+        return {"error": response.json().get("detail", "Unknown error")}
+
+# Example usage in a view
+from django.http import JsonResponse
+
+def predict_ethnicity_view(request):
+    if request.method == "POST" and request.FILES.get("image"):
+        image = request.FILES["image"]
+
+        # Save image temporarily
+        with open("temp_image.jpg", "wb") as f:
+            for chunk in image.chunks():
+                f.write(chunk)
+
+        # Call FastAPI
+        result = get_ethnicity_from_fastapi("temp_image.jpg")
+
+        # Extract only ethnicity from the result
+        if "ethnicity" in result:
+            return JsonResponse({"ethnicity": result["ethnicity"]})
+        else:
+            return JsonResponse(result)  # Return error or fallback
+
+    return JsonResponse({"error": "Invalid request"})
+
+def ethnicity_form_view(request):
+    if request.method == "POST" and request.FILES.get("image"):
+        return predict_ethnicity_view(request)  # Use your view from above
+    return render(request, "form.html")
