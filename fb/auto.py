@@ -2143,113 +2143,144 @@ def get_ethnicity_from_fastapi_bytes(image_bytes, api_url="http://localhost:5050
         return "Unknown"
 
 def check_overview_section(driver, univer, visited_accounts_file, profile_link, username, password, matched_university):
+    import requests
+
     global current_logged_in_username
 
-    try:
-        # Initialize variables
-        group_university = matched_university  # From group
-        profile_university = ""  # From profile
+    # ---------------------- Helper Logging ----------------------
+    def log_debug(msg):
+        print(f"[DEBUG] {msg}")
 
-        # # Navigate to "About" section
+    def log_info(msg):
+        print(f"[INFO] {msg}")
+
+    def log_error(msg):
+        print(f"[ERROR] {msg}")
+
+    # ---------------------- Helper Functions ----------------------
+    def get_element_text(driver, xpath, timeout=10):
+        try:
+            element = WebDriverWait(driver, timeout).until(
+                EC.visibility_of_element_located((By.XPATH, xpath))
+            )
+            return element.text
+        except Exception as e:
+            log_error(f"Failed to extract text from '{xpath}': {e}")
+            return ""
+
+    def download_image_bytes(image_url):
+        try:
+            response = requests.get(image_url)
+            if response.status_code == 200:
+                return response.content
+            log_error(f"Failed to download image, status code: {response.status_code}")
+        except Exception as e:
+            log_error(f"Image download error: {e}")
+        return None
+
+    def get_profile_name():
+        name_xpath = (
+            "//h1[@class='html-h1 xdj266r x14z9mp xat24cr x1lziwak xexx8yu xyri2b "
+            "x18d9i69 x1c1uobl x1vvkbs x1heor9g x1qlqyl8 x1pd3egz x1a2a7pz']"
+        )
+        return get_element_text(driver, name_xpath)
+
+    def extract_studies_text():
+        studies_xpath = (
+            "//div[contains(@class, 'x13faqbe') and contains(@class, 'x78zum5') and contains(@class, 'xdt5ytf')]"
+            "//span[contains(text(), 'Studies')]"
+        )
+        return get_element_text(driver, studies_xpath)
+
+    def detect_image_ethnicity():
+        try:
+            image_xpath = "(//*[name()='image'])[2]"
+            image_element = WebDriverWait(driver, 10).until(
+                EC.visibility_of_element_located((By.XPATH, image_xpath))
+            )
+            log_debug("Found image element.")
+
+            image_url = image_element.get_attribute("href") or image_element.get_attribute("xlink:href")
+            log_debug(f"Extracted image URL: {image_url}")
+
+            if not image_url:
+                return "Unknown"
+
+            image_bytes = download_image_bytes(image_url)
+            if image_bytes:
+                with open("debug_downloaded_image.jpg", "wb") as f:
+                    f.write(image_bytes)
+                return get_ethnicity_from_fastapi_bytes(image_bytes)
+        except Exception as e:
+            log_error(f"Exception during image ethnicity detection: {e}")
+
+        return "Unknown"
+
+    # ---------------------- Main Logic ----------------------
+    try:
+        # Step 1: Navigate to About section
         about_button = WebDriverWait(driver, 20).until(
             EC.element_to_be_clickable((By.XPATH, "//span[text()='About']"))
         )
         driver.execute_script("arguments[0].click();", about_button)
         time.sleep(7)
 
-        # Extract studies section text
-        studies_xpath = "//div[contains(@class, 'x13faqbe') and contains(@class, 'x78zum5') and contains(@class, 'xdt5ytf')]//span[contains(text(), 'Studies')]"
-        
-        studies_text = extract_text_from_element(driver, studies_xpath)
-
-        # Extract user's name from name heading (not profile title)
-        name_xpath = "//h1[@class='html-h1 xdj266r x14z9mp xat24cr x1lziwak xexx8yu xyri2b x18d9i69 x1c1uobl x1vvkbs x1heor9g x1qlqyl8 x1pd3egz x1a2a7pz']"
-        user_name = extract_text_from_element(driver, name_xpath)
-
-        # Detect ethnicity
+        # Step 2: Extract user data
+        user_name = get_profile_name()
+        studies_text = extract_studies_text()
         ethnicity = detect_ethnicity_from_name(user_name)
-        print(f"[DEBUG] Detected ethnicity for '{user_name}': {ethnicity}")
+        image_ethnicity = detect_image_ethnicity()
 
-        try:
-            image_xpath = "(//*[name()='image'])[2]"
-            image_element = WebDriverWait(driver, 10).until(
-                EC.visibility_of_element_located((By.XPATH, image_xpath))
-            )
-            print("[DEBUG] Found image element:", image_element)
+        log_debug(f"User: {user_name}")
+        log_debug(f"Ethnicity (name): {ethnicity}, Ethnicity (image): {image_ethnicity}")
+        log_debug(f"Studies text: {studies_text}")
 
-            # Extract href attribute (the image URL)
-            image_url = image_element.get_attribute("href") or image_element.get_attribute("xlink:href")
-            print(f"[DEBUG] Extracted image URL: {image_url}")
-
-            if image_url:
-                import requests
-                response = requests.get(image_url)
-                if response.status_code == 200:
-                    image_bytes = response.content
-                    # Optional: save for debug
-                    with open("debug_downloaded_image.jpg", "wb") as f:
-                        f.write(image_bytes)
-
-                    image_ethnicity = get_ethnicity_from_fastapi_bytes(image_bytes)
-                    print(f"[DEBUG] Ethnicity detected: {ethnicity}")
-                else:
-                    print(f"[ERROR] Failed to download image, status code: {response.status_code}")
-                    ethnicity = "Unknown"
-            else:
-                print("[ERROR] No href/xlink:href found on image element")
-                ethnicity = "Unknown"
-
-        except Exception as e:
-            print(f"[ERROR] Exception while retrieving image URL or ethnicity: {e}")
-            ethnicity = "Unknown"
-
+        # Step 3: Validate all conditions
         status = "unmatched"
+        profile_university = ""
 
-        # Proceed only if ethnicity is South Asian and studies text exists
-        if ethnicity == "South Asian" and image_ethnicity == "Indian" and studies_text and studies_text.strip():
-            print(f"[DEBUG] Found studies text: '{studies_text}'")
-            
-            # Convert to lowercase for case-insensitive matching
+        all_conditions_met = (
+            ethnicity == "South Asian" and
+            image_ethnicity == "Indian" and
+            bool(studies_text.strip())
+        )
+
+        log_debug(f"Conditions met? {all_conditions_met}")
+
+        if all_conditions_met:
             studies_text_lower = studies_text.lower()
-            
-            # Create a filtered university list excluding the column name
-            filtered_unis = []
-            for _, row in univer.iterrows():
-                university_name = row['university']
-                # Skip if the university name is just the column name "university"
-                if university_name.lower() == "university":
-                    print(f"[DEBUG] Skipping column header '{university_name}' in study field matching")
-                    continue
-                filtered_unis.append(university_name)
-            
+
+            filtered_unis = [
+                row['university']
+                for _, row in univer.iterrows()
+                if row['university'].strip().lower() != "university"
+            ]
+
             for university_name in filtered_unis:
                 university_lower = university_name.lower()
-                
-                # Only match if the university name is substantial (at least 5 chars)
-                # and represents at least 60% of the complete university name
                 min_match_length = max(5, len(university_name) * 0.6)
-                
+
                 if len(university_name) >= min_match_length and university_lower in studies_text_lower:
+                    profile_university = university_name
                     status = "pending"
-                    # Track matched profiles
                     time_tracker.update_session_metrics("profiles_matched")
-                    # Also increment the carry forward messages count for this match
                     time_tracker.increment_carried_forward_messages()
-                    print(f"[INFO] University match found: '{university_name}' in studies text: '{studies_text}'")
-                    profile_university = university_name  # Store the matched university name from studies
+                    log_info(f"Matched university: '{university_name}' in studies text.")
                     break
+            else:
+                log_info("No university matched in studies text.")
         else:
-            print(f"[INFO] No match: Either ethnicity '{ethnicity}' is not South Asian or no studies info")
+            log_info("Conditions not met: Ethnicity or studies text invalid.")
 
-        # Final university assignment
-        final_university = profile_university if profile_university else group_university
+        # Step 4: Assign final university
+        final_university = profile_university if profile_university else matched_university
         if profile_university:
-            print(f"[INFO] Using profile-detected university: '{profile_university}'")
-        elif group_university:
-            print(f"[INFO] Using group-detected university: '{group_university}'")
+            log_info(f"Using profile-detected university: {profile_university}")
+        elif matched_university:
+            log_info(f"Using group-matched university: {matched_university}")
 
-        # Record match status
-        search_username = current_logged_in_username if current_logged_in_username else username
+        search_username = current_logged_in_username or username
+
         new_entry = pd.DataFrame({
             "link": [profile_link],
             "name": [user_name],
@@ -2259,40 +2290,37 @@ def check_overview_section(driver, univer, visited_accounts_file, profile_link, 
             "university": [final_university if status == "matched" else ""]
         })
 
-        # Use the safe CSV write function to avoid duplicates
         safe_write_to_csv(new_entry, visited_accounts_file)
 
-        # No need to add to visited_accounts_set here since we already did before navigation
-
-        # Process messages after checking each profile
+        # Step 5: Process messages
         process_pending_messages(username, password)
-        
+
         return status
 
     except Exception as e:
-        print(f"[ERROR] Error in check_overview_section or locked profile: {e}")
-        # Profile is already in visited_accounts_set, just record the error in the CSV
-        user_name = "Unknown" # Default name for locked profiles
+        log_error(f"Exception in check_overview_section: {e}")
+        user_name = "Unknown"
         try:
-            # Try to get the name if possible
-            user_name = extract_text_from_element(driver, "//span[@class='x193iq5w xeuugli x13faqbe x1vvkbs x1xmvt09 x1lliihq x1s928wv xhkezso x1gmr53x x1cpjm7i x1fgarty x1943h6x x14qwyeo xw06pyt x579bpy xjkpybl x1xlr1w8 xzsf02u x1yc453h']")
+            fallback_xpath = (
+                "//span[@class='x193iq5w xeuugli x13faqbe x1vvkbs x1xmvt09 "
+                "x1lliihq x1s928wv xhkezso x1gmr53x x1cpjm7i x1fgarty x1943h6x "
+                "x14qwyeo xw06pyt x579bpy xjkpybl x1xlr1w8 xzsf02u x1yc453h']"
+            )
+            user_name = get_element_text(driver, fallback_xpath)
         except:
             pass
-            
-        # Add to visited accounts with error status and include the global username
-        search_username = current_logged_in_username if current_logged_in_username else username
-        new_entry = pd.DataFrame({
-            "link": [profile_link], 
-            "name": [user_name], 
-            "timestamp": [pd.Timestamp.now()], 
-            "status": ["locked"], 
+
+        search_username = current_logged_in_username or username
+        error_entry = pd.DataFrame({
+            "link": [profile_link],
+            "name": [user_name],
+            "timestamp": [pd.Timestamp.now()],
+            "status": ["locked"],
             "searched_by": [search_username],
             "university": [matched_university]
         })
-        
-        # Use the safe CSV write function to avoid duplicates
-        safe_write_to_csv(new_entry, visited_accounts_file)
-        
+
+        safe_write_to_csv(error_entry, visited_accounts_file)
         return "error"
 
 
